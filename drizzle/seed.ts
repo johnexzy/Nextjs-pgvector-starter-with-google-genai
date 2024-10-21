@@ -1,21 +1,53 @@
 import 'dotenv/config'
 import { db } from './db'
 import { pokemons } from './schema'
-import { eq } from 'drizzle-orm'
-import { openai } from '../lib/openai'
-import pokemon from './pokemon-with-embeddings.json'
-import { embed } from 'ai'
-
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('process.env.OPENAI_API_KEY is not defined. Please set it.')
-}
-
-if (!process.env.POSTGRES_URL) {
-  throw new Error('process.env.POSTGRES_URL is not defined. Please set it.')
-}
+import { eq, sql } from 'drizzle-orm'
+import pokemon from './pokemon.json'
+import { generateEmbedding } from '@/lib/utils'
 
 async function main() {
   try {
+    // Check if the vector extension exists
+    const extensionExists = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM pg_extension WHERE extname = 'vector'
+      );
+    `);
+
+    if (!extensionExists.rows[0].exists) {
+      console.log('Vector extension does not exist. Creating...');
+      await db.execute(sql`CREATE EXTENSION vector;`);
+      console.log('Vector extension created successfully.');
+    }
+
+    // Drop the pokemon table if it exists
+    console.log('Dropping existing pokemon table...');
+    await db.execute(sql`DROP TABLE IF EXISTS pokemon;`);
+    console.log('Pokemon table dropped successfully.');
+
+    // Create the pokemon table
+    console.log('Creating new pokemon table...');
+    await db.execute(sql`
+      CREATE TABLE pokemon (
+        id TEXT PRIMARY KEY,
+        number INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        type1 TEXT NOT NULL,
+        type2 TEXT,
+        total INTEGER NOT NULL,
+        hp INTEGER NOT NULL,
+        attack INTEGER NOT NULL,
+        defense INTEGER NOT NULL,
+        "spAtk" INTEGER NOT NULL,
+        "spDef" INTEGER NOT NULL,
+        speed INTEGER NOT NULL,
+        generation INTEGER NOT NULL,
+        legendary BOOLEAN NOT NULL,
+        embedding vector(768)
+      );
+    `);
+    console.log('Pokemon table created successfully.');
+
     const pika = await db.query.pokemons.findFirst({
       where: (pokemons, { eq }) => eq(pokemons.name, 'Pikachu'),
     })
@@ -25,17 +57,17 @@ async function main() {
       return
     }
   } catch (error) {
-    console.error('Error checking if "Pikachu" exists in the database.')
-    throw error
+    console.error('Error in database operations:', error);
+    throw error;
   }
   for (const record of (pokemon as any).data) {
     // In order to save time, we'll just use the embeddings we've already generated
     // for each Pokémon. If you want to generate them yourself, uncomment the
     // following line and comment out the line after it.
-    // const embedding = await generateEmbedding(p.name);
-    // await new Promise((r) => setTimeout(r, 500)); // Wait 500ms between requests;
-    const { embedding, ...p } = record
 
+    const { ...p } = record
+    const embedding = await generateEmbedding(p.name);
+    await new Promise((r) => setTimeout(r, 500)); // Wait 500ms between requests;
     // Create the pokemon in the database
     const [pokemon] = await db.insert(pokemons).values(p).returning()
 
@@ -66,11 +98,3 @@ main()
     process.exit(1)
   })
 
-async function generateEmbedding(_input: string) {
-  const input = _input.replace(/\n/g, ' ')
-  const { embedding } = await embed({
-    model: openai.embedding('text-embedding-ada-002'),
-    value: input,
-  })
-  return embedding
-}

@@ -2,9 +2,8 @@
 
 import { db } from '@/drizzle/db'
 import { SelectPokemon, pokemons } from '@/drizzle/schema'
-import { openai } from '@/lib/openai'
 import { desc, sql, cosineDistance, gt } from 'drizzle-orm'
-import { embed } from 'ai'
+import { generateEmbedding } from '@/lib/utils'
 
 export async function searchPokedex(
   query: string
@@ -32,14 +31,4 @@ export async function searchPokedex(
     console.error(error)
     throw error
   }
-}
-
-async function generateEmbedding(raw: string) {
-  // OpenAI recommends replacing newlines with spaces for best results
-  const input = raw.replace(/\n/g, ' ')
-  const { embedding } = await embed({
-    model: openai.embedding('text-embedding-ada-002'),
-    value: input,
-  })
-  return embedding
 }

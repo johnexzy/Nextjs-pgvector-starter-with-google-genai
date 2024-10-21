@@ -28,7 +28,7 @@ export const pokemons = pgTable(
     speed: integer('speed').notNull(),
     generation: integer('generation').notNull(),
     legendary: boolean('legendary').notNull(),
-    embedding: vector('embedding', { dimensions: 1536 }),
+    embedding: vector('embedding', { dimensions: 768 }),
   },
   (table) => ({
     embeddingIndex: index().using(

@@ -7,6 +7,9 @@ import { generateEmbedding } from '@/lib/utils'
 
 async function main() {
   try {
+    // Check if we're in production
+    const isProd = process.env.NODE_ENV === 'production'
+
     // Check if the vector extension exists
     const extensionExists = await db.execute(sql`
       SELECT EXISTS (
@@ -20,10 +23,12 @@ async function main() {
       console.log('Vector extension created successfully.');
     }
 
-    // Drop the pokemon table if it exists
-    console.log('Dropping existing pokemon table...');
-    await db.execute(sql`DROP TABLE IF EXISTS pokemon;`);
-    console.log('Pokemon table dropped successfully.');
+    // Only drop tables in development
+    if (!isProd) {
+      console.log('Dropping existing pokemon table...');
+      await db.execute(sql`DROP TABLE IF EXISTS pokemon;`);
+      console.log('Pokemon table dropped successfully.');
+    }
 
     // Create the pokemon table
     console.log('Creating new pokemon table...');

@@ -3,7 +3,7 @@ import { db } from './db'
 import { pokemons } from './schema'
 import { eq, sql } from 'drizzle-orm'
 import pokemon from './pokemon.json'
-import { generateEmbedding } from '@/lib/utils'
+import { generateEmbedding } from '../lib/utils'
 
 async function main() {
   try {

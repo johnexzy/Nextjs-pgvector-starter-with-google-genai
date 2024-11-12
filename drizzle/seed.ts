@@ -30,10 +30,10 @@ async function main() {
       console.log('Pokemon table dropped successfully.');
     }
 
-    // Create the pokemon table
-    console.log('Creating new pokemon table...');
+    // Create the pokemon table if it doesn't exist
+    console.log('Creating pokemon table if it doesn\'t exist...');
     await db.execute(sql`
-      CREATE TABLE pokemon (
+      CREATE TABLE IF NOT EXISTS pokemon (
         id TEXT PRIMARY KEY,
         number INTEGER NOT NULL,
         name TEXT NOT NULL,
